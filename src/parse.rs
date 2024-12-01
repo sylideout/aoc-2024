@@ -14,7 +14,7 @@ fn generate_id_fn_mapping() -> HashMap<String, fn(String)> {
 pub fn parse_input(day: &str, part:&str) {
     let day_part_fn_map: HashMap<String, fn(String)> = generate_id_fn_mapping();
     let unique_qn_id = format!("{day}{part}");
-    let file_path = format!("src/input/day_1_1.txt");
+    let file_path = format!("src/input/day_{day}_{part}.txt");
     let data = fs::read_to_string(file_path)
         .expect("Wrong input");
     day_part_fn_map[&unique_qn_id[..]](data);
