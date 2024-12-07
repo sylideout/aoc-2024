@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 pub fn d_6_1(data: String) {
     let mut lab: Vec<Vec<char>> = Vec::new();
@@ -13,7 +13,7 @@ pub fn d_6_1(data: String) {
                 lab.push(row);
             }
         );
-    
+
     for i in 0..lab.len() {
         for j in 0..lab[0].len() {
             if lab[i][j] == '^' {
@@ -25,7 +25,7 @@ pub fn d_6_1(data: String) {
     }
 
     loop {
-        let (n_h, n_l, n_d) = trace(&mut lab, (h, l), dir);
+        let (n_h, n_l, n_d) = trace(&lab, (h, l), dir);
         if unique_positions.contains(&(n_h, n_l, n_d)) {
             break
         } else {
@@ -34,7 +34,6 @@ pub fn d_6_1(data: String) {
             visited.insert((n_h, n_l));
         }
     }
-
     println!("{:?}", visited.len());
 }
 
@@ -42,10 +41,7 @@ pub fn d_6_2(data: String) {
     let mut lab: Vec<Vec<char>> = Vec::new();
     let mut unique_positions: HashSet<(usize, usize, usize)> = HashSet::new();
     let mut visited: HashSet<(usize, usize)> = HashSet::new();
-    let mut obstacles: HashSet<(usize, usize)> = HashSet::new();
-    let mut historical_routes
-        : HashMap<(usize, usize, usize), HashSet<(usize, usize, usize)>> = HashMap::new();
-    let mut combinations = 0;
+    let mut obstacles_placed: HashSet<(usize, usize)> = HashSet::new();
     let (mut h, mut l, mut dir) = (0, 0, 0);
 
     data.lines()
@@ -62,40 +58,47 @@ pub fn d_6_2(data: String) {
                 (h, l) = (i, j);
                 unique_positions.insert((h, l, dir));
                 visited.insert((h, l));
-            } else if lab[i][j] == '#' {
-                obstacles.insert((i, j));
             }
         }
     }
 
     loop {
-        let (n_h, n_l, n_d) = trace(&mut lab, (h, l), dir);
+        let (o_h, o_l, _) = get_next_dir((h, l, dir));
+        if !visited.contains(&(o_h, o_l)) && o_h < lab.len() && o_l < lab[0].len() 
+            && lab[o_h][o_l] == '.' {
+            lab[o_h][o_l] = '#';
+            let (mut c_h, mut c_l, mut c_d) = (h, l, dir);
+            let mut loop_visited: HashSet<(usize, usize, usize)> = HashSet::new();
+            loop {
+                let (n_h, n_l, n_d) = trace(&lab, (c_h, c_l), c_d);
+                if (n_h, n_l, n_d) == (c_h, c_l, c_d) {
+                    break;
+                }
+                if loop_visited.contains(&(n_h, n_l, n_d)) 
+                    || unique_positions.contains(&(n_h, n_l, n_d)) {
+                    obstacles_placed.insert((o_h, o_l));
+                    break;
+                } else {
+                    (c_h, c_l, c_d) = (n_h, n_l, n_d);
+                    loop_visited.insert((c_h, c_l, c_d));
+                }
+            }
+            lab[o_h][o_l] = '.';
+        }
+        let (n_h, n_l, n_d) = trace(&lab, (h, l), dir);
         if unique_positions.contains(&(n_h, n_l, n_d)) {
             break
         } else {
             (h, l, dir) = (n_h, n_l, n_d);
-
-            if unique_positions.contains(&(n_h, n_l, (n_d+3)%4)) {
-                historical_routes
-                    .entry((n_h, n_l, (n_d+3)%4))
-                    .or_insert_with(HashSet::new)
-                    .insert((n_h, n_l, n_d));
-            }
             unique_positions.insert((n_h, n_l, n_d));
-            visited.insert((n_h, n_l));
+            visited.insert((h, l));
         }
     }
-    unique_positions.iter().for_each(
-        |p| {
-        if valid_loop(*p, &unique_positions, &visited, &obstacles, &historical_routes) {combinations+=1}
-        }
-    );
-
-    println!("{:?}", combinations);
+    println!("{:?}", obstacles_placed.len());
 }
 
 fn trace(
-    map: &mut Vec<Vec<char>>,
+    map: &Vec<Vec<char>>,
     idx: (usize, usize),
     dir: usize
 ) -> (usize, usize, usize) {
@@ -112,59 +115,13 @@ fn trace(
     }
 }
 
-fn valid_loop(
-    p: (usize, usize, usize),
-    unique_positions: &HashSet<(usize, usize, usize)>,
-    visited: &HashSet<(usize, usize)>,
-    obstacles: &HashSet<(usize, usize)>,
-    historical_routes: &HashMap<(usize, usize, usize), HashSet<(usize, usize, usize)>>
-) -> bool {
-    let (o_h, o_l, _) = get_next_dir((p.0, p.1, p.2));
-    let mut x = obstacles.clone();
-    if obstacles.contains(&(o_h, o_l)) {
-        return false;
-    } else {
-        x.insert((o_h, o_l));
-    }
-
-    if historical_routes.contains_key(&(p.0, p.1, p.2)) 
-        && historical_routes.get(&(p.0, p.1, p.2)).unwrap().contains(&(p.0, p.1, (p.2+1)%4)){
-        return false;
-    }
-
-    if !can_go_next((p.0, p.1, p.2)) {
-        return false;
-    }
-
-    let (mut n_h, mut n_l, mut n_d) = get_next_dir((p.0, p.1, (p.2+1)%4));
-    loop {
-        if !can_go_next((n_h, n_l, n_d)) {
-            return false;
-        }
-        if x.contains(&(n_h, n_l)) {
-            // println!("OBSTACLE{:?}", (n_h, n_l, n_d));
-            (n_h, n_l, n_d) = get_prev_dir((n_h, n_l, (n_d+1)%4));
-            // println!("WRONG{:?}", (n_h, n_l, n_d));
-            continue
-        }
-        if unique_positions.contains(&(n_h, n_l, n_d)) {
-            return true;
-        }
-        if visited.contains(&(n_h, n_l)) {
-            (n_h, n_l, n_d) = get_next_dir((n_h, n_l, n_d));
-            continue
-        }
-        return false;
-    }
-}
-
 fn get_next_dir(curr: (usize, usize, usize)) -> (usize, usize, usize) {
     let (mut r_h, mut r_l, r_d) = curr;
-    if curr.2 == 0 {
+    if curr.2 == 0 && r_h > 0 {
         r_h -= 1;
     } else if curr.2 == 2 {
         r_h += 1;
-    } else if curr.2 == 3 {
+    } else if curr.2 == 3 && r_l > 0 {
         r_l -= 1;
     } else if curr.2 == 1 {
         r_l += 1;
@@ -172,36 +129,6 @@ fn get_next_dir(curr: (usize, usize, usize)) -> (usize, usize, usize) {
     (r_h, r_l, r_d)
 }
 
-fn can_go_next(curr: (usize, usize, usize)) -> bool {
-    if curr.2 == 0 && 0 < curr.0 {
-        return true;
-    } else if curr.2 == 2 && curr.0 < 130 {
-        return true;
-    } else if curr.2 == 3 && 0 < curr.1 {
-        return true;
-    } else if curr.2 == 1 && curr.1 < 130 {
-        return true;
-    }
-    false
-}
-
-fn get_prev_dir(curr: (usize, usize, usize)) -> (usize, usize, usize) {
-    let (mut r_h, mut r_l, r_d) = curr;
-    if curr.2 == 0 {
-        r_h -= 1;
-        r_l += 1;
-    } else if curr.2 == 2 {
-        r_h += 1;
-        r_l -= 1;
-    } else if curr.2 == 3 {
-        r_h -= 1;
-        r_l -= 1;
-    } else if curr.2 == 1 {
-        r_h += 1;
-        r_l += 1;
-    }
-    (r_h, r_l, r_d)
-}
 
 #[cfg(test)]
 mod tests {
