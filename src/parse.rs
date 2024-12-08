@@ -6,6 +6,7 @@ mod day_4;
 mod day_5;
 mod day_6;
 mod day_7;
+mod day_8;
 
 fn generate_id_fn_mapping() -> HashMap<String, fn(String)> {
     HashMap::from([
@@ -23,9 +24,7 @@ fn generate_id_fn_mapping() -> HashMap<String, fn(String)> {
         ("62".to_string(), day_6::d_6_2 as fn(String)),
         ("71".to_string(), day_7::d_7_1 as fn(String)),
         ("72".to_string(), day_7::d_7_2 as fn(String)),
-        // ("31".to_string(), day_3::d_3_1 as fn(String)),
-        // ("31".to_string(), day_3::d_3_1 as fn(String)),
-        // ("31".to_string(), day_3::d_3_1 as fn(String)),
+        ("81".to_string(), day_8::d_8_1 as fn(String)),
         // ("31".to_string(), day_3::d_3_1 as fn(String)),
     ])
 }
